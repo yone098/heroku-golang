@@ -1,5 +1,5 @@
 {
-	"ImportPath": "heroku-golang",
+	"ImportPath": "github.com/yone098/heroku-golang",
 	"GoVersion": "go1.6",
 	"GodepVersion": "v62",
 	"Packages": [
