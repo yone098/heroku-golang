@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/zenazn/goji"
 	"github.com/zenazn/goji/web"
@@ -51,8 +52,13 @@ func linebot(c web.C, w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	port := os.Getenv("PORT")
 
-	flag.Set("bind", ":80")
+	if port == "" {
+		log.Fatal("$PORT must be set")
+	}
+
+	flag.Set("bind", ":"+port)
 
 	goji.Get("/test", hoge)
 	goji.Post("/hello/:name", recieve)
