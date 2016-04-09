@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -15,7 +16,6 @@ import (
 
 func index(c web.C, w http.ResponseWriter, r *http.Request) {
 	log.Println("called hoge")
-	fmt.Errorf("This is Test, %s!", "LINE BOT")
 	fmt.Fprintf(w, "Hello %s!", "hoge")
 }
 
@@ -48,6 +48,13 @@ type content struct {
 	ToType          int               `json:"toType"`
 }
 
+type requestContent struct {
+	To        []string `json:"to"`
+	ToChannel int64    `json:"toChannel"`
+	EventType string   `json:"eventType"`
+	Content   content  `json:"content"`
+}
+
 // callback function
 func callback(c web.C, w http.ResponseWriter, r *http.Request) {
 	log.Println("called callback")
@@ -66,7 +73,64 @@ func callback(c web.C, w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("msg:%v\n", m)
+
+	var reqContent requestContent
+	for _, result := range m.Result {
+		result.Content.Text = "ハゲ"
+		reqContent = requestContent{
+			To:        []string{result.Content.From},
+			ToChannel: 1383378250,
+			EventType: "138311608800106203",
+			Content:   result.Content,
+		}
+	}
+	log.Printf("### reqContent:%v\n", reqContent)
+
+	b, err = json.Marshal(reqContent)
+	if err != nil {
+		log.Fatal(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	endpointURI := "https://trialbot-api.line.me/v1/events"
+	req, err := http.NewRequest(
+		"POST",
+		endpointURI,
+		bytes.NewBuffer(b),
+	)
+	if err != nil {
+		log.Fatal(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+	req.Header.Set("X-Line-ChannelID", channelID)
+	req.Header.Set("X-Line-ChannelSecret", channelSecret)
+	req.Header.Set("X-Line-Trusted-User-With-ACL", channelMID)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	defer resp.Body.Close()
+	if err != nil {
+		log.Fatal(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Println("###STATUS:", resp.StatusCode)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Println("body:", string(body))
+
+	fmt.Fprintf(w, "OK")
 }
+
+var channelID string
+var channelSecret string
+var channelMID string
 
 // main function
 func main() {
@@ -76,8 +140,12 @@ func main() {
 	}
 	flag.Set("bind", ":"+port)
 
-	channelID := os.Getenv("LINE_BOT_CHANNEL_ID")
+	channelID = os.Getenv("LINE_BOT_CHANNEL_ID")
 	log.Println("CHANNEL_ID:", channelID)
+	channelSecret = os.Getenv("LINE_BOT_CHANNEL_SECRET")
+	log.Println("CHANNEL_SECRET:", channelSecret)
+	channelMID = os.Getenv("LINE_BOT_CHANNEL_MID")
+	log.Println("CHANNEL_MID:", channelMID)
 
 	goji.Get("/", index)
 	goji.Post("/bot/callback", callback)
