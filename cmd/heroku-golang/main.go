@@ -13,12 +13,14 @@ import (
 	"github.com/zenazn/goji/web"
 )
 
-func hoge(c web.C, w http.ResponseWriter, r *http.Request) {
+func index(c web.C, w http.ResponseWriter, r *http.Request) {
+	log.Println("called hoge")
+	fmt.Errorf("This is Test, %s!", "LINE BOT")
 	fmt.Fprintf(w, "Hello %s!", "hoge")
 }
 
-func recieve(c web.C, w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello, %s!", c.URLParams["name"])
+type callbackMessage struct {
+	Result []msg `json:"result"`
 }
 
 type msg struct {
@@ -33,16 +35,18 @@ type msg struct {
 	Location        map[string]interface{} `json:"location"`
 }
 
-func linebot(c web.C, w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "This is Test, %s!", "LINE BOT")
+// callback function
+func callback(c web.C, w http.ResponseWriter, r *http.Request) {
+	log.Println("called callback")
 
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	log.Println("msg:", string(b))
 
-	var m msg
+	var m callbackMessage
 	if err := json.Unmarshal(b, &m); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -51,17 +55,15 @@ func linebot(c web.C, w http.ResponseWriter, r *http.Request) {
 	log.Printf("msg:%v\n", m)
 }
 
+// main function
 func main() {
 	port := os.Getenv("PORT")
-
 	if port == "" {
 		log.Fatal("$PORT must be set")
 	}
-
 	flag.Set("bind", ":"+port)
 
-	goji.Get("/test", hoge)
-	goji.Post("/hello/:name", recieve)
-	goji.Post("/linebot", linebot)
+	goji.Get("/", index)
+	goji.Post("/bot/callback", callback)
 	goji.Serve()
 }
