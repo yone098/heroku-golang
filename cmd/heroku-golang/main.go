@@ -24,15 +24,28 @@ type callbackMessage struct {
 }
 
 type msg struct {
-	ID              string                 `json:"id"`
-	ContentType     int                    `json:"conetntType"`
-	From            string                 `json:"from"`
-	CreatedTime     int                    `json:"createdTime"`
-	To              []string               `json:"to"`
-	ToType          int                    `json:"toType"`
-	ContentMetadata map[string]interface{} `json:"contentMetadata"`
-	Text            string                 `json:"text"`
-	Location        map[string]interface{} `json:"location"`
+	Content     content  `json:"content"`
+	CreatedTime int64    `json:"createdTime"`
+	EventType   string   `json:"eventType"`
+	From        string   `json:"from"`
+	FromChannel int64    `json:"fromChannel"`
+	ID          string   `json:"id"`
+	To          []string `json:"to"`
+	ToChannel   int64    `json:"toChannel"`
+}
+
+type content struct {
+	ContentMetadata map[string]string `json:"contentMetadata"`
+	ContentType     int               `json:"contentType"`
+	CreatedTime     int64             `json:"createdTime"`
+	DeliveredTime   int64             `json:"deliveredTime"`
+	From            string            `json:"from"`
+	ID              string            `json:"id"`
+	Location        string            `json:"location"`
+	Seq             string            `json:"seq"`
+	Text            string            `json:"text"`
+	To              []string          `json:"to"`
+	ToType          int               `json:"toType"`
 }
 
 // callback function
@@ -62,6 +75,9 @@ func main() {
 		log.Fatal("$PORT must be set")
 	}
 	flag.Set("bind", ":"+port)
+
+	channelID := os.Getenv("LINE_BOT_CHANNEL_ID")
+	log.Println("CHANNEL_ID:", channelID)
 
 	goji.Get("/", index)
 	goji.Post("/bot/callback", callback)
